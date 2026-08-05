@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../signup/Signup.css";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3002";
+import { API_URL } from "../../api";
 
 function Login() {
   const navigate = useNavigate();

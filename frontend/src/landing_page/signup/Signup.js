@@ -1,223 +1,77 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./Signup.css";
-
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:3002";
+import { API_URL } from "../../api";
 
 function Signup() {
+  const navigate = useNavigate();
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState("phone"); // 'phone', 'otp', 'details'
-  const [userDetails, setUserDetails] = useState({ name: "", email: "", password: "" });
 
-  const handleGetOTP = async (event) => {
+  const handlePhoneSubmit = async (event) => {
     event.preventDefault();
-    setMessage("");
-    setIsSubmitting(true);
-
-    // Validate phone number
-    if (phoneNumber.length !== 10 || !/^\d{10}$/.test(phoneNumber)) {
-      setMessage("Please enter a valid 10-digit phone number");
-      setIsSubmitting(false);
+    const number = phoneNumber.replace(/\D/g, "");
+    if (number.length !== 10) {
+      setMessage("Enter a valid 10-digit mobile number.");
       return;
     }
 
+    setMessage("");
+    setIsSubmitting(true);
     try {
       const response = await fetch(`${API_URL}/request-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phoneNumber }),
+        body: JSON.stringify({ phone: number }),
       });
       const data = await response.json();
-
       if (!response.ok) throw new Error(data.message || "Unable to send OTP");
-
-      setMessage(data.message || "OTP sent successfully");
-      setOtpSent(true);
-      setStep("otp");
+      sessionStorage.setItem("signupPhone", number);
+      navigate("/Signup/otp");
     } catch (error) {
-      setMessage(error.message || "Unable to reach the server");
+      setMessage(error instanceof TypeError ? "Could not reach the signup API. Start it with npm run dev, or set REACT_APP_API_URL for your deployed API." : error.message || "Unable to reach the server");
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleVerifyOTP = async (event) => {
-    event.preventDefault();
-    setMessage("");
-    setIsSubmitting(true);
-
-    if (otp.length !== 6 || !/^\d{6}$/.test(otp)) {
-      setMessage("Please enter a valid 6-digit OTP");
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phoneNumber, otp }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || "Invalid OTP");
-
-      setMessage("OTP verified. Please enter your details.");
-      setStep("details");
-    } catch (error) {
-      setMessage(error.message || "Unable to verify OTP");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSignup = async (event) => {
-    event.preventDefault();
-    setMessage("");
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch(`${API_URL}/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: userDetails.name,
-          email: userDetails.email,
-          phone: phoneNumber,
-          password: userDetails.password,
-        }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || "Unable to create account");
-
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      document.cookie = `token=${encodeURIComponent(data.token)}; Path=/; SameSite=Lax`;
-      window.dispatchEvent(new Event("authChanged"));
-      window.location.href = "/";
-    } catch (error) {
-      setMessage(error.message || "Unable to reach the server");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const updateDetailsField = (event) => {
-    setUserDetails({ ...userDetails, [event.target.name]: event.target.value });
   };
 
   return (
     <main className="signup-page">
-      <section className="signup-container">
-        <div className="signup-header">
-          <h1>Signup now</h1>
-          <p>Or track your existing application</p>
+      <header className="signup-hero">
+        <h1>Open a free demat and trading account online</h1>
+        <p>Start investing brokerage free and join a community of 1.6+ crore investors and traders</p>
+      </header>
+
+      <section className="signup-content" aria-label="Create your account">
+        <div className="signup-artwork">
+          <img src="/images/signup.png" alt="A preview of Zerodha's investing platforms" />
         </div>
 
-        {step === "phone" && (
-          <form onSubmit={handleGetOTP} className="signup-form phone-form">
-            <div className="phone-input-group">
-              <div className="country-code">
-                <img 
-                  src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 600'%3E%3Crect width='900' height='600' fill='%23FF9933'/%3E%3Cline x1='0' y1='200' x2='900' y2='200' stroke='%23FFF' stroke-width='100'/%3E%3Cline x1='0' y1='400' x2='900' y2='400' stroke='%23128807' stroke-width='100'/%3E%3Ccircle cx='450' cy='300' r='60' fill='%23000' opacity='0.25'/%3E%3C/svg%3E" 
-                  alt="India flag" 
-                  className="flag-icon"
-                />
-                <span className="country-code-text">+91</span>
-              </div>
+        <div className="signup-form-panel">
+          <h2>Signup now</h2>
+          <p className="signup-subtitle">Or track your existing application</p>
+          <form onSubmit={handlePhoneSubmit} noValidate>
+            <label className="phone-field" htmlFor="mobile-number">
+              <span className="country-code" aria-hidden="true"><span className="india-flag">🇮🇳</span> +91</span>
               <input
+                id="mobile-number"
+                name="mobile-number"
                 type="tel"
-                placeholder="Enter your mobile number"
+                inputMode="numeric"
+                autoComplete="tel-national"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                maxLength="10"
-                required
-                className="phone-input"
+                onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="Enter your mobile number"
+                aria-describedby={message ? "signup-message" : undefined}
               />
-            </div>
-            <button type="submit" disabled={isSubmitting} className="get-otp-btn">
-              {isSubmitting ? "Sending OTP..." : "Get OTP"}
-            </button>
-            {message && <p className={`signup-message ${message.includes("error") || message.includes("Invalid") ? "error" : "success"}`}>{message}</p>}
-            <div className="terms-section">
-              <p>By proceeding, you agree to the <Link to="#" className="link">terms & privacy policy</Link></p>
-            </div>
-            <div className="nri-section">
-              <p>Looking to open NRI account? <Link to="#" className="link">Click here</Link></p>
-            </div>
+            </label>
+            <button type="submit" disabled={isSubmitting}>{isSubmitting ? "Sending OTP..." : "Get OTP"}</button>
           </form>
-        )}
-
-        {step === "otp" && (
-          <form onSubmit={handleVerifyOTP} className="signup-form otp-form">
-            <p className="otp-info">We've sent a 6-digit OTP to +91{phoneNumber}</p>
-            <input
-              type="text"
-              placeholder="Enter OTP"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              maxLength="6"
-              required
-              className="otp-input"
-            />
-            <button type="submit" disabled={isSubmitting} className="verify-btn">
-              {isSubmitting ? "Verifying..." : "Verify OTP"}
-            </button>
-            <button 
-              type="button" 
-              onClick={() => { setStep("phone"); setPhoneNumber(""); setOtp(""); setMessage(""); }} 
-              className="back-btn"
-            >
-              Change phone number
-            </button>
-            {message && <p className={`signup-message ${message.includes("error") || message.includes("Invalid") ? "error" : "success"}`}>{message}</p>}
-          </form>
-        )}
-
-        {step === "details" && (
-          <form onSubmit={handleSignup} className="signup-form details-form">
-            <label htmlFor="name">Full name</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              value={userDetails.name}
-              onChange={updateDetailsField}
-              required
-            />
-
-            <label htmlFor="email">Email address</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={userDetails.email}
-              onChange={updateDetailsField}
-              required
-            />
-
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              minLength="6"
-              value={userDetails.password}
-              onChange={updateDetailsField}
-              required
-            />
-
-            <button type="submit" disabled={isSubmitting} className="submit-btn">
-              {isSubmitting ? "Creating account..." : "Create account"}
-            </button>
-            {message && <p className={`signup-message ${message.includes("error") ? "error" : "success"}`}>{message}</p>}
-          </form>
-        )}
+          {message && <p id="signup-message" className={message.startsWith("OTP") ? "signup-success" : "signup-error"} role="status">{message}</p>}
+          <p className="signup-terms">By proceeding, you agree to the Zerodha <a href="https://zerodha.com/terms-and-conditions/" target="_blank" rel="noreferrer">terms</a> &amp; <a href="https://zerodha.com/privacy/" target="_blank" rel="noreferrer">privacy policy</a></p>
+          <p className="signup-nri">Looking to open NRI account? <Link to="/Support">Click here</Link></p>
+        </div>
       </section>
     </main>
   );

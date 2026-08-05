@@ -88,6 +88,7 @@ This repository includes [render.yaml](./render.yaml), which creates three Rende
 Before the first deploy, set these environment variables in Render:
 
 - `MONGO_URL` on `zerodha-clone-api` — your MongoDB connection string.
+- `FAST2SMS_API_KEY` on `zerodha-clone-api` — your Fast2SMS Dev API authorization key for mobile OTP delivery.
 - `REACT_APP_API_URL` on both static sites — the API URL, for example `https://zerodha-clone-api.onrender.com`.
 - `REACT_APP_DASHBOARD_URL` on the frontend static site — the deployed dashboard URL.
 - `REACT_APP_FRONTEND_URL` on the dashboard static site — the deployed frontend URL.
