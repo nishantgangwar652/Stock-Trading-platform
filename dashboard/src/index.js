@@ -57,8 +57,8 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<AuthPage mode="login" />} />
-        <Route path="/signup" element={<AuthPage mode="signup" />} />
+        <Route path="/login" element={<AuthPage />} />
+        <Route path="/signup" element={<Navigate to="/login" replace />} />
         <Route path="/*" element={<DashboardLogin />} />
       </Routes>
     </BrowserRouter>

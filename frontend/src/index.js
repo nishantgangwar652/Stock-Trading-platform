@@ -4,8 +4,6 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import './index.css';
 import HomePage from './landing_page/home/HomePage';
 import Signup from './landing_page/signup/Signup';
-import MobileOtp from './landing_page/signup/MobileOtp';
-import EmailSignup from './landing_page/signup/EmailSignup';
 import Login from './landing_page/login/Login';
 import AboutPage from './landing_page/about/AboutPage';
 import ProductsPage from './landing_page/products/ProductsPage';
@@ -25,8 +23,6 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<HomePage />}></Route>
       <Route path="/Signup" element={<Signup />}></Route>
-      <Route path="/Signup/otp" element={<MobileOtp />}></Route>
-      <Route path="/Signup/email" element={<EmailSignup />}></Route>
       <Route path="/Login" element={<Login />}></Route>
       <Route path="/Profile" element={<Profile />}></Route>
       <Route path="/About" element={<AboutPage />}></Route>

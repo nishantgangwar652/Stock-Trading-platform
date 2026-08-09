@@ -12,8 +12,6 @@ const { UserModel } = require("./model/UserModel");
 const PORT=process.env.PORT || 3002;
 const uri=process.env.MONGO_URL;
 const dashboardLoginCodes = new Map();
-const signupOtps = new Map();
-const signupVerificationCodes = new Map();
 const app=express();
 app.use(cors());
 app.use(bodyParser.json());
@@ -24,9 +22,6 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 app.use((req, res, next) => {
-  // Phone verification is intentionally available while MongoDB is reconnecting.
-  // Account creation below remains protected by the database check.
-  if (req.path === "/request-otp" || req.path === "/verify-otp") return next();
   if (mongoose.connection.readyState !== 1) {
     return res.status(503).json({ message: "Database unavailable. Check the MongoDB connection." });
   }
@@ -72,88 +67,20 @@ app.post("/dashboard-login-code/exchange", (req, res) => {
   res.json({ token: login.token });
 });
 
-app.post("/request-otp", async (req, res) => {
-  const phone = String(req.body.phone || "").replace(/\D/g, "");
-  if (!/^\d{10}$/.test(phone)) {
-    return res.status(400).json({ message: "Enter a valid 10-digit mobile number" });
-  }
-
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
-  if (!process.env.FAST2SMS_API_KEY) {
-    return res.status(500).json({ message: "SMS service is not configured. Add FAST2SMS_API_KEY to the backend environment." });
-  }
-
-  try {
-    const smsResponse = await fetch("https://www.fast2sms.com/dev/bulkV2", {
-      method: "POST",
-      headers: {
-        Authorization: process.env.FAST2SMS_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        variables_values: otp,
-        route: "otp",
-        numbers: phone,
-      }),
-    });
-    const smsData = await smsResponse.json();
-    if (!smsResponse.ok || smsData.return === false) {
-      console.error("Fast2SMS OTP request failed:", smsData);
-      return res.status(502).json({ message: "Unable to send OTP. Please try again shortly." });
-    }
-
-    signupOtps.set(phone, { otp, expiresAt: Date.now() + 10 * 60_000 });
-    res.json({ message: "OTP sent successfully." });
-  } catch (error) {
-    console.error("Fast2SMS request failed:", error.message);
-    res.status(502).json({ message: "Unable to reach the SMS service. Please try again shortly." });
-  }
-});
-
-app.post("/verify-otp", (req, res) => {
-  const phone = String(req.body.phone || "").replace(/\D/g, "");
-  const otp = String(req.body.otp || "");
-  const savedOtp = signupOtps.get(phone);
-
-  if (!savedOtp || savedOtp.expiresAt < Date.now() || savedOtp.otp !== otp) {
-    return res.status(400).json({ message: "Enter the valid 6-digit OTP." });
-  }
-
-  signupOtps.delete(phone);
-  const verificationToken = require("crypto").randomUUID();
-  signupVerificationCodes.set(verificationToken, { phone, expiresAt: Date.now() + 15 * 60_000 });
-  res.json({ verificationToken });
-});
-
 app.post("/signup", async (req, res) => {
   try {
-    const { name, email, phone, password, verificationToken } = req.body;
-    if (!name || !email || !phone || !password) {
-      return res.status(400).json({ message: "Name, email, phone, and password are required" });
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email, and password are required" });
     }
 
-    // Validate phone number format (10-digit)
-    const phoneRegex = /^[0-9]{10}$/;
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (!phoneRegex.test(cleanPhone)) {
-      return res.status(400).json({ message: "Invalid phone number format. Please provide a 10-digit phone number" });
-    }
-
-    const verification = signupVerificationCodes.get(verificationToken);
-    if (!verification || verification.phone !== cleanPhone || verification.expiresAt < Date.now()) {
-      return res.status(403).json({ message: "Verify your mobile number before creating an account" });
-    }
-
-    const existingUser = await UserModel.findOne({ 
-      $or: [{ email: email.toLowerCase() }, { phone: cleanPhone }]
-    });
+    const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(409).json({ message: "Email or phone number is already registered" });
+      return res.status(409).json({ message: "An account with this email already exists" });
     }
 
-    const user = await UserModel.create({ name, email: email.toLowerCase(), phone: cleanPhone, password });
-    signupVerificationCodes.delete(verificationToken);
-    res.status(201).json({ token: createToken(user), user: { name: user.name, email: user.email, phone: user.phone } });
+    const user = await UserModel.create({ name, email: email.toLowerCase(), password });
+    res.status(201).json({ token: createToken(user), user: { name: user.name, email: user.email } });
   } catch (error) {
     console.error("signup failed:", error);
     res.status(500).json({ message: "Unable to create account" });
