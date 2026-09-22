@@ -110,7 +110,7 @@ For a backend-only Render deployment, use `backend` as the Root Directory, `npm 
 
 **Akash**
 
-GitHub: https://github.com/999Akash999
+GitHub: 
 
 ## 📄 License
 
