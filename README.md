@@ -108,7 +108,7 @@ For a backend-only Render deployment, use `backend` as the Root Directory, `npm 
 
 ## 👨‍💻 Author
 
-**Akash**
+**Nishant Gangwar**
 
 GitHub: 
 
